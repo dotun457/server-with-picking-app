@@ -3,7 +3,7 @@ Code by Joachim Pouderoux, (c) Perception4D, 2023
 
 # Dependencies
 
-Python 3 (tested with 3.10)
+Python 3 (tested with 3.10)  | I used python3.7 (--Dotun)
 velodyne_decoder 2.3.0
 pynmea2
 pylibpcap
