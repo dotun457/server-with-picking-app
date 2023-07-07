@@ -1,0 +1,172 @@
+import '@kitware/vtk.js/Rendering/Profiles/Geometry';
+
+import vtkDataArray from '@kitware/vtk.js/Common/Core/DataArray';
+import vtkPoints from '@kitware/vtk.js/Common/Core/Points';
+import vtkPolyData from '@kitware/vtk.js/Common/DataModel/PolyData';
+import vtkActor from '@kitware/vtk.js/Rendering/Core/Actor';
+import vtkColorTransferFunction from '@kitware/vtk.js/Rendering/Core/ColorTransferFunction';
+import vtkColorMaps from '@kitware/vtk.js/Rendering/Core/ColorTransferFunction/ColorMaps';
+import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
+import vtkFullScreenRenderWindow from '@kitware/vtk.js/Rendering/Misc/FullScreenRenderWindow';
+import React, {useEffect, useRef} from 'react';
+
+function VtkSocketTest() {
+  const renderWindowContainerRef = useRef(null);
+  const context = useRef(null);
+  const websocketRef = useRef(null);
+  const pointsRef = useRef(null);
+  const polyDataRef = useRef(null);
+  const mapperRef = useRef(null);
+
+  useEffect(() => {
+    if (!context.current) {
+      // Set up vtk.js rendering
+      const fullScreenRenderWindow = vtkFullScreenRenderWindow.newInstance({
+        rootContainer: renderWindowContainerRef.current,
+        background: [0, 0, 0],  // Set background color
+      });
+      const renderer = fullScreenRenderWindow.getRenderer();
+      const renderWindow = fullScreenRenderWindow.getRenderWindow();
+
+      // Create vtk.js objects for lidar visualization
+      const actor = vtkActor.newInstance();
+      const mapper = vtkMapper.newInstance({
+        interpolateScalarsBeforeMapping: false,
+        useLookupTableScalarRange: true,
+        scalarVisibility: true
+      });
+      actor.getProperty().setPointSize(4);
+      actor.setMapper(mapper);
+      renderer.addActor(actor);
+
+      const polyData = vtkPolyData.newInstance();
+      const points = vtkPoints.newInstance();
+      const scalars = vtkDataArray.newInstance({
+        numberOfComponents: 1,
+        values: [],  // Initialize with empty array
+      });
+      points.setData(polyData);
+      polyData.setPoints(points);
+      polyData.getPointData().setScalars(scalars);
+
+      // should I reset the camera here or in the updatePolyData function?
+      //  Reset the camera to view the entire scene
+      renderer.resetCamera();
+
+      pointsRef.current = points;
+      polyDataRef.current = polyData;
+      mapperRef.current = mapper;
+
+      renderer.resetCamera();
+      renderWindow.render();
+
+      context.current = {fullScreenRenderWindow, renderWindow, renderer};
+
+      // different way of constructing the polydata objet from the commented
+      // code above
+      const updatePolyData =
+          (pclData) => {
+            const numPoints = pclData.length;
+            const intensityArray = new Uint16Array(numPoints);
+
+            const polyData = vtkPolyData.newInstance();
+            const points = vtkPoints.newInstance({size: numPoints});
+
+            var i = 0;
+            pclData.forEach((item, index) => {
+              const [xVal, yVal, zVal, intensityVal] = item;
+              const dataIndex = index * 3;
+              points.setPoint(
+                  i, isNaN(xVal) ? 0 : xVal, isNaN(yVal) ? 0 : yVal,
+                  isNaN(zVal) ? 0 : zVal);
+              intensityArray[index] = intensityVal;
+              i++;
+            });
+            polyData.setPoints(points);
+
+            const vertices = new Uint32Array(numPoints + 1);
+            vertices[0] = numPoints;
+            for (let i = 0; i < numPoints; i++) {
+              vertices[i + 1] = i;
+            }
+            polyData.getVerts().setData(vertices);
+
+            const intensityDataArray = vtkDataArray.newInstance({
+              name: 'intensity',
+              numberOfComponents: 1,
+              values: intensityArray,
+            });
+            polyData.getPointData().setScalars(intensityDataArray);
+
+            var intensityRange = intensityDataArray.getRange();
+
+            var colorMap = vtkColorTransferFunction.newInstance();
+            colorMap.applyColorMap(
+                vtkColorMaps.getPresetByName('Viridis (matplotlib)'));
+            colorMap.setMappingRange(intensityRange[0], intensityRange[1]);
+            colorMap.updateRange();
+            mapper.setLookupTable(colorMap);
+
+            polyData.modified();
+            mapper.setInputData(polyData);
+            renderer.resetCamera();
+            renderWindow.render();
+          }
+
+      // For the test we just create a set of 10k points
+      var testData = [];
+      for (var i = 0; i < 10000; i++) {
+        var x = Math.random();
+        var y = Math.random();
+        var z = Math.random();
+        var intensity = x * 255;
+        testData.push([x, y, z, intensity]);
+      }
+
+      // and we animate it every 10ms
+      function animationCallback() {
+        for (var i = 0; i < 10000; i++) {
+          testData[i][0] += Math.random()* 0.01;
+          testData[i][1] += Math.random()* 0.01;
+          testData[i][2] += Math.random()* 0.01;
+        }
+        updatePolyData(testData);
+      }
+      setInterval(animationCallback, 10);
+
+      // Create a WebSocket connection
+      // const socket = new WebSocket('ws://localhost:8765');
+      // websocketRef.current = socket;
+
+      // socket.onopen = () => {
+      //   console.log('WebSocket connection established');
+      // };
+
+      // socket.onmessage = (event) => {
+      //   const pclData = parseServerData(JSON.parse(event.data));
+      //   updatePolyData(pclData);
+      // };
+
+      // socket.onclose = () => {
+      //   console.log('WebSocket connection closed');
+      // };
+
+      // // Clean up WebSocket connection when component unmounts
+      // return () => {
+      //   socket.close();
+      // };
+    }
+  }, [renderWindowContainerRef]);
+
+  const parseServerData = (data) => {
+    // Replace NaN values with null
+    const sanitizedData =
+        data.map((item) => item.map((value) => (isNaN(value) ? null : value)));
+    return sanitizedData;
+  };
+
+  return <div ref = { renderWindowContainerRef } />;
+};
+
+
+export default VtkSocketTest;
