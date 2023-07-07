@@ -1,0 +1,27 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+my-vtkjs-app/node_modules
+my-vtkjs-app/.pnp
+my-vtkjs-app/.pnp.js
+
+# testing
+/coverage
+
+# production
+my-vtkjs-app/build
+
+# misc
+my-vtkjs-app/.DS_Store
+my-vtkjs-app/.env.local
+my-vtkjs-app/.env.development.local
+my-vtkjs-app/.env.test.local
+my-vtkjs-app/.env.production.local
+
+my-vtkjs-app/npm-debug.log*
+my-vtkjs-app/yarn-debug.log*
+my-vtkjs-app/yarn-error.log*
+
+
+*.pcap
+__pycache__/

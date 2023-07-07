@@ -1,0 +1,4 @@
+Block Name,Block Number,Point ID,Points_0,Points_1,Points_2,Points_Magnitude,adjustedtime,azimuth,distance_m,intensity,laser_id,timestamp,vertical_angle
+dataset_1,1,25336,-19.1071,-17.0717,1.0439,25.644,1525610052,22682,25.644,5,22,1525610052,2.333
+dataset_1,1,25366,-19.1068,-16.9519,1.04064,25.564,1525610107,22702,25.564,5,22,1525610107,2.333
+dataset_1,1,25449,-19.2802,-16.7482,1.04048,25.56,1525610273,22762,25.56,5,22,1525610273,2.333
