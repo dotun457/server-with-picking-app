@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 cython = "*"
+velodyne-decoder = "*"
+websockets = "*"
 
 [dev-packages]
 
