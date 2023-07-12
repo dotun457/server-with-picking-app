@@ -173,13 +173,11 @@ function VtkSocketTest() {
 
       // should I reset the camera here or in the updatePolyData function?
       //  Reset the camera to view the entire scene
-      renderer.resetCamera();
 
       pointsRef.current = points;
       polyDataRef.current = polyData;
       mapperRef.current = mapper;
 
-      renderer.resetCamera();
       renderWindow.render();
 
       context.current = { fullScreenRenderWindow, renderWindow, renderer };
@@ -237,7 +235,7 @@ function VtkSocketTest() {
       // different way of constructing the polydata objet from the commented
       // code above
       const updatePolyData =
-          (pclData) => {
+          (pclData, track) => {
             const numPoints = pclData.length;
             if (numPoints === 0) return;
             const intensityArray = new Uint16Array(numPoints);
@@ -330,12 +328,12 @@ function VtkSocketTest() {
         }
         else if (frameId == 0){
           console.log("Frame " + frameId + " with " + pclData.length + " points")
-          updatePolyData(pclData);
+          updatePolyData(pclData, true);
         }
         else
         {
           console.log("Frame " + frameId + " with " + pclData.length + " points")
-          updatePolyData(pclData);
+          updatePolyData(pclData, false);
         }
         frameId = frameId + 1
       };
