@@ -157,7 +157,7 @@ function VtkSocketTest() {
         useLookupTableScalarRange: true,
         scalarVisibility: true
       });
-      actor.getProperty().setPointSize(4);
+      actor.getProperty().setPointSize(1);
       actor.setMapper(mapper);
       renderer.addActor(actor);
 
