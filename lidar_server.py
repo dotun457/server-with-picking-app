@@ -194,7 +194,7 @@ async def start_server_lidar(host, port):
 # Start a websocket server to server lidar stream from a PCAP file
 async def start_server_pcap(host, port):
     async with websockets.serve(handle_client_pcap, host, port, origins=authorized_origins):
-        print("WebSocket started on port {}:{}\nWaiting for client...".format(host, port))
+        print("WebSocket started on port {}:{}\nWaiting for client....".format(host, port))
         await asyncio.Future()
 
 ###############################################################################

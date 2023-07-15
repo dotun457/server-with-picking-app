@@ -25,3 +25,5 @@ my-vtkjs-app/yarn-error.log*
 
 *.pcap
 __pycache__/
+
+myenv/

@@ -331,7 +331,7 @@ function VtkSocketTest() {
         else
         {
           console.log("Frame " + frameId + " with " + pclData.length + " points")
-          updatePolyData(pclData, false);
+          updatePolyData(pclData);
         }
         frameId = frameId + 1
       };
