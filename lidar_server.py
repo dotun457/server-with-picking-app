@@ -15,7 +15,8 @@ import time
 import socket
 import velodyne_decoder as vd  # Requires version 2.3.0
 import websockets
-from track import get_flight_track
+from track import get_bdi_flight_track, get_nasa_flight_track
+from tls_velodyne_decoder import pre_processing
 
 ###############################################################################
 # PUBLIC CONSTANTS TO MODIFY
@@ -144,10 +145,11 @@ def parse_pcap_and_print(pcap_file):
 # Serve parse points information on the websocket
 async def serve_parsed_points(points, frame, websocket):
     # print("Frame " + str(frame) + " with " + str(len(points.points)) + " points received at timestamp: " + str(points.stamp))
-    data = points.points
-    data = [(x[0], x[1], x[2], x[3]) for x in data]
-    pcl_data = list(data)
-    pcl_data_json = json.dumps(pcl_data, cls=NumpyFloatValuesEncoder)
+    # data = points.points
+    # data = [(x[0], x[1], x[2], x[3]) for x in data]
+    # pcl_data = list(data)
+    points = await pre_processing(points)
+    pcl_data_json = json.dumps(points, cls=NumpyFloatValuesEncoder)
     await websocket.send(pcl_data_json)
 
 ###############################################################################
@@ -157,7 +159,7 @@ async def handle_client_lidar(websocket):
     await websocket.send(gps_data_json)
 
     frame = 0
-    track_path = get_flight_track()
+    track_path = get_bdi_flight_track()
     for points in decode_lidar_stream(sock, config):
         await serve_parsed_points(points, frame, websocket)
         frame = frame + 1
@@ -170,18 +172,29 @@ async def handle_client_pcap(websocket):
     await websocket.send(gps_data_json)
 
     frame = 0
-    print(args.pcap)
 
-    track_path = get_flight_track()
-    data = [(x[0], x[1], x[2], x[3]) for x in track_path]
-    pcl_data = list(data)
-    pcl_data_json = json.dumps(pcl_data, cls=NumpyFloatValuesEncoder)
-    await websocket.send(pcl_data_json)
+    bdi_track_path = get_bdi_flight_track()
+    nasa_track_path = get_nasa_flight_track()
 
-    # await serve_parsed_points(track_path, frame, websocket)
+    #print(len(bdi_track_path), len(nasa_track_path))
+    def convert_track(track):
+        data = [(x[0], x[1], x[2], x[3]) for x in track]
+        pcl_data = list(data)
+        pcl_data_json = json.dumps(pcl_data, cls=NumpyFloatValuesEncoder)
+        return pcl_data_json
+    
+    pcl_bdi = convert_track(bdi_track_path)
+    pcl_nasa = convert_track(nasa_track_path)
+    
+    #await websocket.send(pcl_bdi)
+    #await websocket.send(pcl_nasa)
 
+    #await serve_parsed_points(track_path, frame, websocket)
+    
     for points in vd.read_pcap(args.pcap.name, config):
-        await serve_parsed_points(points, frame, websocket)
+        data = points.points 
+        data = np.array([np.array([x[0], x[1], x[2], x[3]]) for x in data])
+        await serve_parsed_points(data, frame, websocket)
         frame = frame + 1
 ###############################################################################
 # Start a websocket server to server lidar stream from a socket
@@ -220,7 +233,6 @@ def main():
     args = parser.parse_args()
 
     config = vd.Config(model=args.lidar_model, rpm=args.lidar_rpm, gps_time = True)  # LiDAR settings
-
     if args.pcap != None:
         print("Process PCAP file " + args.pcap.name + "...")
         gps_fix = get_gps_fix_pcap(args.pcap.name, config)

@@ -10,7 +10,7 @@ import vtkMapper from '@kitware/vtk.js/Rendering/Core/Mapper';
 import vtkPointPicker from '@kitware/vtk.js/Rendering/Core/PointPicker';
 import vtkFullScreenRenderWindow from '@kitware/vtk.js/Rendering/Misc/FullScreenRenderWindow';
 import vtkSphereSource from '@kitware/vtk.js/Filters/Sources/SphereSource';
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import proj4 from 'proj4';
 import proj4list from './list.min'
 
@@ -21,6 +21,8 @@ let gpsOrientation = [0., 0., 0.]; // Roll, pitch, yaw in degrees
 let pickingSphere = null;
 let sphereMapper = null;
 let sphereActor = null;
+let bdiTrackData = [];
+let nasaTrackData = [];
 
 // Define WGS84 Projection (lat, lon)
 const wgs84 = proj4.Proj('EPSG:4326');
@@ -139,7 +141,7 @@ function VtkSocketTest() {
   const pointsRef = useRef(null);
   const polyDataRef = useRef(null);
   const mapperRef = useRef(null);
-
+  //const [trackPoints, setTrackPoints] = useState(3);
   useEffect(() => {
     if (!context.current) {
       // Set up vtk.js rendering
@@ -175,8 +177,6 @@ function VtkSocketTest() {
       pointsRef.current = points;
       polyDataRef.current = polyData;
       mapperRef.current = mapper;
-
-      renderWindow.render();
 
       context.current = { fullScreenRenderWindow, renderWindow, renderer };
 
@@ -227,14 +227,15 @@ function VtkSocketTest() {
             }
           }
         }
-        renderWindow.render();
+        //renderWindow.render();
       });
 
       // different way of constructing the polydata objet from the commented
       // code above
       const updatePolyData =
-          (pclData, track) => {
-            const numPoints = pclData.length;
+          (pclData, bdiTrackData, nasaTrackData) => {
+            let pointCloud = [...pclData, ...bdiTrackData, ...nasaTrackData]; 
+            const numPoints = pointCloud.length;
             if (numPoints === 0) return;
             const intensityArray = new Uint16Array(numPoints);
 
@@ -242,13 +243,18 @@ function VtkSocketTest() {
             const points = vtkPoints.newInstance();
             points.setNumberOfPoints(numPoints);
 
-            pclData.forEach((item, index) => {
-              const [xVal, yVal, zVal, intensityVal] = item;
-              points.setPoint(
-                index, isNaN(xVal) ? 0 : xVal, isNaN(yVal) ? 0 : yVal,
-                  isNaN(zVal) ? 0 : zVal);
+            let index = 0;
+            for(let index = 0; index < pointCloud.length; index++){
+              const [xVal, yVal, zVal, intensityVal] = pointCloud[index];
+              points.setPoint
+              (
+                index, 
+                isNaN(xVal) ? 0 : xVal, 
+                isNaN(yVal) ? 0 : yVal,
+                isNaN(zVal) ? 0 : zVal
+              );
               intensityArray[index] = intensityVal;
-            });
+            }
             polyData.setPoints(points);
 
             const vertices = new Uint32Array(numPoints + 1);
@@ -272,7 +278,7 @@ function VtkSocketTest() {
                 vtkColorMaps.getPresetByName('Viridis (matplotlib)'));
             colorMap.setMappingRange(intensityRange[0], intensityRange[1]);
             colorMap.updateRange();
-            mapper.setLookupTable(colorMap);
+            //mapper.setLookupTable(colorMap);
 
             //polyData.modified();
             mapper.setInputData(polyData);
@@ -285,7 +291,6 @@ function VtkSocketTest() {
             cnt++;
             renderWindow.render();
           }
-
       // For the test we just create a set of 10k points
       const nbTestPoints = 10;
       var testData = [];
@@ -315,7 +320,7 @@ function VtkSocketTest() {
       socket.onopen = () => {
         console.log('WebSocket connection established');
       };
-
+      
       socket.onmessage = (event) => {
         //console.log("message received");
         const pclData = JSON.parse(event.data);
@@ -324,14 +329,20 @@ function VtkSocketTest() {
           gpsFix = pclData;
           console.log("GPS Fix received: " + gpsFix);
         }
-        else if (frameId == 0){
-          console.log("Frame " + frameId + " with " + pclData.length + " points")
-          updatePolyData(pclData, true);
-        }
+        // else if (frameId == 0){
+        //   console.log("Frame " + frameId + " with " + pclData.length + " points");
+        //   bdiTrackData  = pclData;
+        //   updatePolyData(pclData, [], []);
+        // }
+        // else if (frameId == 1){
+        //   console.log("Frame " + frameId + " with " + pclData.length + " points");
+        //   nasaTrackData  = pclData;
+        //   updatePolyData(pclData, [], []);
+        // }
         else
         {
-          console.log("Frame " + frameId + " with " + pclData.length + " points")
-          updatePolyData(pclData);
+          console.log("Frame " + frameId + " with " + pclData.length + " points");
+          updatePolyData(pclData, [], []);
         }
         frameId = frameId + 1
       };
