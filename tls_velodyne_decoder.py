@@ -37,7 +37,7 @@ def generate_transform_matrix(alpha_1, alpha_2, R, theta3):
         [0, 0, 1, 0],
         [0, 0, 0, 1]
     ])
-
+    #have to return the transpose
     return A1, A2, T, T4
 
 
@@ -45,19 +45,17 @@ def filter_points_by_pos(ptCloudIn, pos=2): #filters the point cloud data to onl
     if pos == 1:
         return ptCloudIn[ptCloudIn[:, 0] > 0]
     elif pos == 2:
-        indices = ptCloudIn[:, 0] <= 0
+        x = ptCloudIn[:, 0]
+        x_without_nan = np.nan_to_num(x, nan=0)
+        indices = x_without_nan <= 0
         filtered_points = ptCloudIn[indices]
         return filtered_points
     else:
         return ptCloudIn
 
 def apply_affine_transformation(points, transform):
-    # Homogenize the points (adding a 1 for the affine transformation)
-    homogenized_points = np.hstack([points[:, :3], np.ones((points.shape[0], 1))])
-    transformed_points = homogenized_points @ transform.T
-    transformed_points = transformed_points[:, :3]
-    points[:, :3] = transformed_points
-    return points
+    transformed_points = points @ transform
+    return transformed_points
 
 def matlab_point_clouds_dome(times, pointCloud, band_number: int=32):
     rotated_point_cloud = []

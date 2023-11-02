@@ -196,7 +196,6 @@ async def handle_client_lidar(websocket):
     await websocket.send(gps_data_json)
 
     frame = 0
-    track_path = get_bdi_flight_track()
     for points in decode_lidar_stream(sock, config):
         await serve_parsed_points(points, frame, websocket, None)
         frame = frame + 1
@@ -248,9 +247,15 @@ async def start_server_pcap(host, port):
             times = len(list(initial_read))
             initial_read = vd.read_pcap(args.pcap.name, config)
             angle_deg = np.linspace(0, angle, times + 1)
-            angle_rad = np.radians(angle_deg)
+            angle_rad = np.radians(angle_deg)[1:]
             A1, A2, T, T4 = generate_transform_matrix(alpha_1, alpha_2, R, theta3)
-        
+            cntr = 0
+            for i in initial_read:
+                tmp = i.points
+                print(len(tmp))
+                cntr += 1
+                if cntr >= 1:
+                    break
             def filter_transform(points):
                 points = points.points #points.points yields a numpy.ndarray object (n, 6)
                 points = points[:, :4]
@@ -262,7 +267,7 @@ async def start_server_pcap(host, port):
                     [-np.sin(angle_), 0, np.cos(angle_), 0],
                     [0, 0, 0, 1]
                 ])
-            
+                VM = VM
                 transformed_points = filter_points_by_pos(points, pos)
                 for tform in [T, A1, A2, T4, VM]:
                     tmp = apply_affine_transformation(transformed_points, tform)
