@@ -10,30 +10,30 @@ import numpy as np
 # Define transformation matrices
 def generate_transform_matrix(alpha_1, alpha_2, R, theta3):
 
-    A1 = np.array([
+    A1 = np.array([ #degrees in matlab
         [1, 0, 0, 0],
         [0, np.cos(np.radians(alpha_1)), np.sin(np.radians(alpha_1)), 0],
         [0, -np.sin(np.radians(alpha_1)), np.cos(np.radians(alpha_1)), 0],
         [0, 0, 0, 1]
     ])
 
-    A2 = np.array([
+    A2 = np.array([ #degrees in matlab
         [np.cos(np.radians(alpha_2)), np.sin(np.radians(alpha_2)), 0, 0],
         [-np.sin(np.radians(alpha_2)), np.cos(np.radians(alpha_2)), 0, 0],
         [0, 0, 1, 0],
         [0, 0, 0, 1]
     ])
 
-    T = np.array([
+    T = np.array([ # R = 0
         [1, 0, 0, 0],
         [0, 1, 0, 0],
         [0, 0, 1, R],
         [0, 0, 0, 1]
     ])
 
-    T4 = np.array([
-        [np.cos(np.radians(theta3)), np.sin(np.radians(theta3)), 0, 0],
-        [-np.sin(np.radians(theta3)), np.cos(np.radians(theta3)), 0, 0],
+    T4 = np.array([ # degrees in matlab 
+        [np.cos(theta3), np.sin(theta3), 0, 0],
+        [-np.sin(theta3), np.cos(theta3), 0, 0],
         [0, 0, 1, 0],
         [0, 0, 0, 1]
     ])
@@ -57,7 +57,7 @@ def apply_affine_transformation(points, transform):
     transformed_points = points @ transform
     return transformed_points
 
-def matlab_point_clouds_dome(times, pointCloud, band_number: int=32):
+def matlab_point_clouds_dome(times, pointCloud, band_number: int=32): #first version of the matlab merging I converted 
     rotated_point_cloud = []
     for bande_sep in range(band_number):#32
         X_ref_final, Y_ref_final, Z_ref_final , int_ref_final = []
@@ -99,7 +99,7 @@ def matlab_point_clouds_dome(times, pointCloud, band_number: int=32):
     return rot
 
 
-def point_cloud_dome(point_cloud, band_number: int=32):
+def point_cloud_dome(point_cloud, band_number: int=32): #final version, current function being used 
     combined_pcd = None
     def map_fun_rotate(frame, bande_sep):#return a rotated point cloud frame 
         cur_frame = deepcopy(frame)
@@ -107,15 +107,15 @@ def point_cloud_dome(point_cloud, band_number: int=32):
         lower_bound = bande_sep * round(num_points / band_number)
         upper_bound = ( bande_sep + 1) * round( num_points / band_number ) - 1
 
-        mask = np.zeros(num_points, dtype=bool)
+        mask = np.zeros(num_points, dtype=bool) #creates a frame numpy array where all points not in the current band range will be False / 0
         mask[lower_bound:upper_bound] = True
 
         # Set rows not in the second chunk to zero
         cur_frame[~mask] = 0
         rot = np.array([
                 [1, 0, 0, 0],
-                [0, np.cos(np.radians(-90)), -np.sin(np.radians(-90)), 0],
-                [0, np.sin(np.radians(-90)), np.cos(np.radians(-90)), 0],
+                [0, np.cos(-90), -np.sin(-90), 0],
+                [0, np.sin(-90), np.cos(-90), 0],
                 [0, 0, 0, 1]
             ])
         rotated_frame = apply_affine_transformation(cur_frame, rot)
@@ -126,5 +126,5 @@ def point_cloud_dome(point_cloud, band_number: int=32):
         if bande_sep == 0: 
             combined_pcd = band_point_cloud
         else:
-            combined_pcd = [final_arr + new_arr for final_arr, new_arr in zip(combined_pcd, band_point_cloud)]
+            combined_pcd = [final_arr + new_arr for final_arr, new_arr in zip(combined_pcd, band_point_cloud)] #MIGHT BE WRONG 
     return combined_pcd
